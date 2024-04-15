@@ -1,12 +1,110 @@
-//
-//  Analyze.swift
-//  Audio Summary
-//
-//  Created by 柳培铎 on 3/28/24.
-//
-
 import SwiftUI
 import Speech
+
+class SummaryViewModel: ObservableObject {
+    @Published var summary: String = ""
+    @Published var errorMessage: String = ""
+
+    func fetchSummary(message: String) async {
+        NetworkingService.shared.fetchSummary(for: message) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let summary):
+                    self?.summary = summary
+                case .failure(let error):
+                    self?.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+}
+
+struct SummaryDetailView: View {
+    @State private var editableSummary: String
+    @State private var editableStory: String
+    @StateObject public var viewModel = SummaryViewModel()
+    @State public var index : Int
+
+    @EnvironmentObject var globaldata: GlobalData
+
+
+    @State private var editingSummary = false
+    @State private var editingStory = false
+    
+    init(index: Int, summary: String, story: String) {
+        _editableSummary = State(initialValue: summary)
+        _editableStory = State(initialValue: story)
+        self._index = State(initialValue: index)
+        
+    }
+    
+    func updateSummary() {
+        Task {
+//            print("2", editableStory)
+            await viewModel.fetchSummary(message: editableStory)
+            
+            DispatchQueue.main.async {
+                globaldata.recordings[index].summary = viewModel.summary
+                editableSummary = viewModel.summary
+            }
+            
+        }
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if editingSummary {
+                    TextField("Edit Summary", text: $editableSummary)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("Done") {
+                        editingSummary = false
+                        // Add logic to save changes to summary here if needed
+//                        updateSummary()
+                    }
+                    .padding(.vertical)
+                } else {
+                    Text(editableSummary)
+                    Button("Edit Summary") {
+                        editingSummary = true
+                    }
+                    .padding(.vertical)
+                }
+                
+                Divider()
+                
+                Button("Ask Question")
+                {
+                    if !editingSummary
+                    {
+                        updateSummary()
+                    }
+                }
+                
+              
+                if editingStory {
+                    TextEditor(text: $editableStory)
+                        .frame(minHeight: 200) // Ensure there's enough space for easier editing
+                        .border(Color.gray, width: 1) // Visually distinguish the text editor area
+                    Button("Done") {
+                        editingStory = false
+                        // Add logic to save changes to story here if needed
+                    }
+                    .padding(.vertical)
+                } else {
+                    Text(editableStory)
+                    Button("Edit Story") {
+                        editingStory = true
+                    }
+                    .padding(.vertical)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Summary Detail")
+    }
+}
 
 
 func recognizeFile(url: URL) async -> String? {
@@ -49,8 +147,8 @@ struct Analyze: View {
     @State public var index : Int
     @EnvironmentObject var globaldata: GlobalData
     @StateObject public var viewModel = SummaryViewModel()
-    @State private var prompt: String = ""
-
+    @State private var prompt: String = "Give me answers of this story in the following form, who, what, where, when, how:"
+    @State private var message: String = ""
 
     var body: some View {
         ZStack
@@ -64,36 +162,17 @@ struct Analyze: View {
             
             VStack
             {
-                
-                // Naming TextField and Submit Button
-                Text("Ask Anything about this Audio")
-                    .font(.headline) // Make the prompt more noticeable
-                    .padding(.bottom, 5)
-                
-                TextField("Enter name", text: $prompt)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
-                
-                Button("Submit") {
-                    print("Recording name: \(prompt)")
-                }
-                .disabled(prompt.isEmpty)
-                .padding()
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(radius: 5) // Add shadow
-                
-                
-                
+                                
                 
                 Button(action:
                         {
                     Task
                     {
-                        var message = await recognizeFile(url: globaldata.recordings[index].fileURL) ?? "Could not transcribe audio."
+                        message = await recognizeFile(url: globaldata.recordings[index].fileURL) ?? "Could not transcribe audio."
                         //                    let prompt = "Give me a summary of what happened, where, who, and how of the summary above."
+                        
                         message += prompt
-                        print("message", message)
+//                        print("message", message)
                         await viewModel.fetchSummary(message: message)
                         DispatchQueue.main.async
                         {
@@ -101,7 +180,7 @@ struct Analyze: View {
                         }
                     }
                 }) {
-                    Text("Analyze this Audio")
+                    Text("Transcribe this Audio")
                         .font(.title) // Make the font larger
                         .fontWeight(.bold) // Make the text bold
                         .foregroundColor(.white)
@@ -122,9 +201,9 @@ struct Analyze: View {
                 
                 Spacer()
                 
-                if globaldata.recordings[index].summary != "dum"
-                {
-                    NavigationLink(destination: SummaryDetailView(summary: globaldata.recordings[index].summary))
+//                if globaldata.recordings[index].summary != "dum"
+//                {
+                NavigationLink(destination: SummaryDetailView(index: index, summary: globaldata.recordings[index].summary, story: message))
                     {
                         Text("Show Summary Detail")
                             .font(.headline) // Make it more prominent
@@ -134,7 +213,7 @@ struct Analyze: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .shadow(radius: 5)
                     }
-                }
+//                }
                 
                 
                 

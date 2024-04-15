@@ -48,10 +48,10 @@ class AudioRecorderViewModel: ObservableObject
         isRecording = false
         guard let url = audioRecorder?.url else { return }
         let newRecording = AudioRecording(title: title, fileURL: url, summary: "dum")
-        print("not new recording")
+//        print("not new recording")
         DispatchQueue.main.async {
             self.globalData?.addRecording(newRecording)
-            print("Added new recording")
+//            print("Added new recording")
         }
     }
 }

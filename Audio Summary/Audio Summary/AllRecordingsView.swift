@@ -2,24 +2,7 @@ import SwiftUI
 import Speech
 
     
-class SummaryViewModel: ObservableObject {
-    @Published var summary: String = ""
-    @Published var errorMessage: String = ""
 
-    func fetchSummary(message: String) async {
-        NetworkingService.shared.fetchSummary(for: message) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let summary):
-                    self?.summary = summary
-                case .failure(let error):
-                    self?.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-    
-}
 
 class AudioPlayerHelper: ObservableObject {
     var audioPlayer: AVAudioPlayer?
@@ -36,17 +19,17 @@ class AudioPlayerHelper: ObservableObject {
 
 
 
-struct SummaryDetailView: View {
-    let summary: String
-
-    var body: some View {
-        ScrollView {
-            Text(summary)
-                .padding()
-        }
-        .navigationTitle("Summary Detail")
-    }
-}
+//struct SummaryDetailView: View {
+//    let summary: String
+//
+//    var body: some View {
+//        ScrollView {
+//            Text(summary)
+//                .padding()
+//        }
+//        .navigationTitle("Summary Detail")
+//    }
+//}
 
 
 struct AllRecordingsView: View 
